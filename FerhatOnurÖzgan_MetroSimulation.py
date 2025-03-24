@@ -3,53 +3,61 @@ import heapq
 from typing import Dict, List, Tuple, Optional
 
 class Istasyon:
-    """Bir metro istasyonunu temsil eder."""
     def __init__(self, idx: str, ad: str, hat: str):
         self.idx = idx
         self.ad = ad
         self.hat = hat
-        self.komsular: List[Tuple['Istasyon', int]] = []  # (komşu_istasyon, süre)
+        self.komsular: List[Tuple['Istasyon', int]] = []  # (komşu istasyon, süre)
 
     def komsu_ekle(self, istasyon: 'Istasyon', sure: int):
-        """İstasyonlar arasında bağlantı ekler."""
+        if sure <= 0:
+            raise ValueError(f"Hatalı süre: {sure}. Süre pozitif olmalıdır.")
         self.komsular.append((istasyon, sure))
 
 class MetroAgi:
-    """Metro ağını yöneten sınıf."""
     def __init__(self):
         self.istasyonlar: Dict[str, Istasyon] = {}
         self.hatlar: Dict[str, List[Istasyon]] = defaultdict(list)
 
     def istasyon_ekle(self, idx: str, ad: str, hat: str) -> None:
-        """Yeni bir istasyon ekler."""
-        if idx not in self.istasyonlar:
-            istasyon = Istasyon(idx, ad, hat)
-            self.istasyonlar[idx] = istasyon
-            self.hatlar[hat].append(istasyon)
+        """ Yeni bir istasyon ekler. Aynı ID'ye sahip istasyon zaten varsa ekleme yapmaz. """
+        if idx in self.istasyonlar:
+            print(f"Uyarı: {idx} ID'li istasyon zaten mevcut.")
+            return
+
+        self.istasyonlar[idx] = Istasyon(idx, ad, hat)
+        self.hatlar[hat].append(self.istasyonlar[idx])
 
     def baglanti_ekle(self, istasyon1_id: str, istasyon2_id: str, sure: int) -> None:
-        """İki istasyon arasında bağlantı ekler."""
+        """ İki istasyon arasında bağlantı ekler. Hatalı ID girilirse hata mesajı döndürür. """
+        if istasyon1_id not in self.istasyonlar or istasyon2_id not in self.istasyonlar:
+            raise ValueError(f"Bağlantı hatası: '{istasyon1_id}' veya '{istasyon2_id}' istasyon ID'si bulunamadı.")
+        
         istasyon1 = self.istasyonlar[istasyon1_id]
         istasyon2 = self.istasyonlar[istasyon2_id]
-        istasyon1.komsu_ekle(istasyon2, sure)
-        istasyon2.komsu_ekle(istasyon1, sure)
+
+        try:
+            istasyon1.komsu_ekle(istasyon2, sure)
+            istasyon2.komsu_ekle(istasyon1, sure)
+        except ValueError as e:
+            print(f"Hata: {e}")
 
     def en_az_aktarma_bul(self, baslangic_id: str, hedef_id: str) -> Optional[List[Istasyon]]:
-        """BFS kullanarak en az aktarmalı rota bulur."""
+        """ BFS kullanarak en az aktarmalı rotayı bulur. """
         if baslangic_id not in self.istasyonlar or hedef_id not in self.istasyonlar:
+            print(f"Hata: '{baslangic_id}' veya '{hedef_id}' istasyonu bulunamadı.")
             return None
 
         baslangic = self.istasyonlar[baslangic_id]
         hedef = self.istasyonlar[hedef_id]
-
-        kuyruk = deque([(baslangic, [baslangic], 0)])  # (istasyon, rota, aktarma sayısı)
+        kuyruk = deque([(baslangic, [baslangic], 0)])  # (şu anki istasyon, yol, aktarma sayısı)
         ziyaret_edildi = {}
 
         while kuyruk:
             mevcut, yol, aktarma_sayisi = kuyruk.popleft()
 
             if mevcut == hedef:
-                return yol  # Hedef bulundu
+                return yol  # Hedefe ulaştık
 
             for komsu, _ in mevcut.komsular:
                 yeni_aktarma = aktarma_sayisi + (1 if komsu.hat != mevcut.hat else 0)
@@ -58,44 +66,37 @@ class MetroAgi:
                     ziyaret_edildi[komsu] = yeni_aktarma
                     kuyruk.append((komsu, yol + [komsu], yeni_aktarma))
 
-        return None  # Yol bulunamadı
-
-    def heuristic(self, mevcut: Istasyon, hedef: Istasyon) -> int:
-        """
-        Tahmini maliyet (heuristic) hesaplayan fonksiyon.
-        Mevcut ve hedef arasındaki tahmini mesafiye hesaplıyor.
-        Gerçek uygulamada coğrafi koordinatları veya istasyon ağı bilgisini kullanabiliriz.
-        """
-        return abs(hash(mevcut.idx) - hash(hedef.idx)) % 10
+        return None  # Hedefe ulaşılamadıysa
 
     def en_hizli_rota_bul(self, baslangic_id: str, hedef_id: str) -> Optional[Tuple[List[Istasyon], int]]:
-        """A* algoritmasını kullanarak en hızlı rotayı bulur."""
+        """ Dijkstra algoritması ile en kısa sürede ulaşılabilecek rotayı bulur. """
         if baslangic_id not in self.istasyonlar or hedef_id not in self.istasyonlar:
-                return None
+            print(f"Hata: '{baslangic_id}' veya '{hedef_id}' istasyonu bulunamadı.")
+            return None
 
         baslangic = self.istasyonlar[baslangic_id]
         hedef = self.istasyonlar[hedef_id]
-
-        pq = [(0 + self.heuristic(baslangic, hedef), 0, baslangic, [baslangic])]  # (f(süre+tahmin), süre, istasyon, yol)
+        
+        pq = [(0, id(baslangic), baslangic, [baslangic])]  # (toplam_süre, id, şu_an_istasyon, yol)
         ziyaret_edildi = {}
 
         while pq:
-                _, toplam_sure, mevcut, yol = heapq.heappop(pq)
+            toplam_sure, _, mevcut, yol = heapq.heappop(pq)
 
-                if mevcut in ziyaret_edildi and ziyaret_edildi[mevcut] <= toplam_sure:
-                        continue
-                ziyaret_edildi[mevcut] = toplam_sure
+            if mevcut in ziyaret_edildi and ziyaret_edildi[mevcut] <= toplam_sure:
+                continue
+            ziyaret_edildi[mevcut] = toplam_sure
 
-                if mevcut == hedef:
-                        return (yol, toplam_sure)  # Hedefe ulaşıldı
+            if mevcut == hedef:
+                return (yol, toplam_sure)  # Hedefe ulaştık, yolu ve süreyi döndür
 
-                for komsu, sure in mevcut.komsular:
-                        yeni_toplam_sure = toplam_sure + sure
-                        yeni_yol = yol + [komsu]
-                        f_degeri = yeni_toplam_sure + self.heuristic(komsu, hedef)  # A* için f(n) = g(n) + h(n)
-                        heapq.heappush(pq, (f_degeri, yeni_toplam_sure, komsu, yeni_yol))
+            for komsu, sure in mevcut.komsular:
+                yeni_toplam_sure = toplam_sure + sure
+                yeni_yol = yol + [komsu]
+                heapq.heappush(pq, (yeni_toplam_sure, id(komsu), komsu, yeni_yol))
 
         return None  # Hedefe ulaşılamadıysa
+
 
 # Örnek Kullanım
 if __name__ == "__main__":
