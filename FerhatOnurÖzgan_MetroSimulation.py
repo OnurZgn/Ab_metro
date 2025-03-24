@@ -177,3 +177,98 @@ if __name__ == "__main__":
     if sonuc:
         rota, sure = sonuc
         print(f"En hızlı rota ({sure} dakika):", " -> ".join(i.ad for i in rota)) 
+    try:
+        metro_yeni = MetroAgi()
+
+        # İstasyonlar ve bağlantılar ekleniyor
+        metro_yeni.istasyon_ekle("K1", "Kızılay", "Kırmızı Hat")
+        metro_yeni.istasyon_ekle("K2", "Ulus", "Kırmızı Hat")
+        metro_yeni.istasyon_ekle("K3", "Mecidiyeköy", "Mavi Hat")
+        metro_yeni.istasyon_ekle("K4", "Levent", "Mavi Hat")
+        metro_yeni.istasyon_ekle("K5", "Bostancı", "Yeşil Hat")
+        metro_yeni.istasyon_ekle("K6", "Kadıköy", "Yeşil Hat")
+        
+        # Bağlantılar
+        metro_yeni.baglanti_ekle("K1", "K2", 4)  # Kızılay - Ulus
+        metro_yeni.baglanti_ekle("K2", "K3", 6)  # Ulus - Mecidiyeköy
+        metro_yeni.baglanti_ekle("K3", "K4", 7)  # Mecidiyeköy - Levent
+        metro_yeni.baglanti_ekle("K4", "K5", 8)  # Levent - Bostancı
+        metro_yeni.baglanti_ekle("K5", "K6", 9)  # Bostancı - Kadıköy
+
+        # 1. Test: Doğrudan bağlı iki istasyon
+        print("\nTest 1: Kızılay - Ulus (Doğrudan Bağlantı)")
+        rota = metro_yeni.en_az_aktarma_bul("K1", "K2")
+        if rota:
+            print("En az aktarmalı rota: ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+        
+        sonuc = metro_yeni.en_hizli_rota_bul("K1", "K2")
+        if sonuc:
+            rota, sure = sonuc
+            print(f"En hızlı rota ({sure} dakika): ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+
+        # 2. Test: Aktarma gerektiren rota
+        print("\nTest 2: Kızılay - Levent (Aktarma Gerektiriyor)")
+        rota = metro_yeni.en_az_aktarma_bul("K1", "K4")
+        if rota:
+            print("En az aktarmalı rota: ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+        
+        sonuc = metro_yeni.en_hizli_rota_bul("K1", "K4")
+        if sonuc:
+            rota, sure = sonuc
+            print(f"En hızlı rota ({sure} dakika): ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+
+        # 3. Test: Uzak mesafede iki istasyon
+        print("\nTest 3: Kızılay - Kadıköy (Uzak mesafe, birden fazla aktarma)")
+        rota = metro_yeni.en_az_aktarma_bul("K1", "K6")
+        if rota:
+            print("En az aktarmalı rota: ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+        
+        sonuc = metro_yeni.en_hizli_rota_bul("K1", "K6")
+        if sonuc:
+            rota, sure = sonuc
+            print(f"En hızlı rota ({sure} dakika): ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+
+        # 4. Test: Hedef bulunmayan senaryo
+        print("\nTest 4: Kızılay - Kadıköy (Bağlantı yok)")
+        rota = metro_yeni.en_az_aktarma_bul("K1", "Kadıköy")  # Hatalı ID
+        if rota:
+            print("En az aktarmalı rota: ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+        
+        sonuc = metro_yeni.en_hizli_rota_bul("K1", "Kadıköy")  # Hatalı ID
+        if sonuc:
+            rota, sure = sonuc
+            print(f"En hızlı rota ({sure} dakika): ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+
+        # 5. Test: Farklı hatlardaki istasyonlar
+        print("\nTest 5: Kızılay - Kadıköy (Farklı hatlar)")
+        rota = metro_yeni.en_az_aktarma_bul("K1", "K6")
+        if rota:
+            print("En az aktarmalı rota: ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+        
+        sonuc = metro_yeni.en_hizli_rota_bul("K1", "K6")
+        if sonuc:
+            rota, sure = sonuc
+            print(f"En hızlı rota ({sure} dakika): ", " -> ".join(i.ad for i in rota))
+        else:
+            print("Rota bulunamadı.")
+
+    except Exception as e:
+        print(f"Beklenmeyen bir hata oluştu: {e}")
